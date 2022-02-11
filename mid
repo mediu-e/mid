@@ -1,0 +1,52 @@
+#!/bin/sh 
+
+Usage() {
+  cat <<-USAGE 1>&2
+  Usage: mid [-s(num)] start_line_number end_line_number [file]
+  0 < start_line_number =< end_line_number
+  if [file] is none, mid input stdin.
+
+  -s(num) : if start/end_number is range over, no message and exit by state num.
+            ex. -s0 :exit 0
+                -s2 ;exit 2
+            num is MUST need. There is No space between -s and num.
+            This option do not stop error messages expr, cat, so on. 
+USAGE
+  exit 1
+}
+
+SilentExit() {
+	exit "$1"
+}
+
+#option
+opt="$( echo $1 | sed 's/\(-s\)[0-9]*/\1/' )"
+status="$( expr $( echo $1 | sed 's/-s//' ) + 0 )";status_check="$( echo $? )"
+
+if [ "${opt}" = "-s" ] && [ "${status_check}" -lt 2 ]
+then
+  #DO NOT check status value between 0 to 255 
+  shift 1
+fi
+#main
+#Check that arguments is integer
+start=$( expr $1 + 0 ) ;start_check=$( echo $? )
+  end=$( expr $2 + 0 ) ;  end_check=$( echo $? )
+
+#Do if values 0<start=<end
+if [ "${start_check}" -lt 2 ] && [ "${end_check}" -lt 2 ] && [ "${start}" -gt 0 ] && [ "${end}" -ge "${start}" ]
+then
+  shift 2 
+  # specified file by the third argument is read and outpu to stdout.
+  # If any file is not specified, cat command wait input from stdin.
+  cat ${1+"$@"}        |
+  head -n "${end}"     | 
+  tail -n "+${start}"    
+#Otherwise exit.
+elif [ "${opt}" = "-s" ]
+then
+  SilentExit "${status}"
+else
+  Usage
+fi
+
